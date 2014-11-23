@@ -1,0 +1,108 @@
+---
+output: pdf_document
+---
+# Statistical inference, Course Project, Part 2  
+Assignment text in *italic*.  
+
+*Now in the second portion of the class, we're going to analyze the ToothGrowth data in the R datasets package.*    
+
+
+## Question 1
+*1. Load the ToothGrowth data and perform some basic exploratory data analyses* 
+
+```{r}
+# Load data set containing the ToothGrowth data
+library(datasets)
+# Load graphics package
+library(ggplot2)
+
+# Draw plot to graphically explore the data
+ggplot(data = ToothGrowth, aes(x=supp, y=len, group=supp, color=supp)) +
+    ggtitle("Tooth growth by dose and supp") +
+    xlab("Dose") +
+    ylab("Length") +
+    geom_point() +
+    facet_grid(. ~ dose) 
+```
+  
+Based on the plot, we can draw the following conclusios:  
+- Dose is positively correlated with tooth growth for both supp types  
+- OJ has a stronger effect on growth than VC for lower doses 0.5 and 1.0, but not (necessarily) with dose 2.0  
+- The variance of OJ decreases with dose size, while the variance of VC increases  
+
+
+## Question 2
+*2. Provide a basic summary of the data.*
+
+```{r}
+summary(ToothGrowth)
+```
+  
+The basic data summary shows that  
+- the data set contains 60 observations of tooth length  
+- it is grouped by supp type and dose  
+- supp is either OJ och VC  
+- dose is 0.5, 1.0 or 2.0  
+  
+The conclusions from question 1 about the distributions can also be drawn from the data summary below. 
+```{r}
+means <- aggregate(ToothGrowth$len, by=list(ToothGrowth$dose, ToothGrowth$supp), FUN = mean)
+sds <- aggregate(ToothGrowth$len, by=list(ToothGrowth$dose, ToothGrowth$supp), FUN = sd)
+summary <- cbind(means, sds$x)
+colnames(summary) <- c("dose", "supp", "mean", "sd")
+summary
+```
+  
+
+## Question 3
+*3. Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose. (Only use the techniques from class, even if there's other approaches worth considering)*
+  
+We run two sample (non-paired) t-tests comparing the tooth length by supp and dose. A t-test is better than a z-test as we have small sample sizes when we group by supp (30) or dose (20).  
+
+### Difference by supp
+T-test comparing the difference in length by supp:
+```{r}
+t.test(ToothGrowth$len[ToothGrowth$supp == "OJ"], ToothGrowth$len[ToothGrowth$supp == "VC"])
+```
+The p-value of this test is 0.06063, which by commonly used rules for p-value interpretation would imply that there is a "low presumption" against the null hypothesis, which in this case is that there is no difference in the lengths between the data sets. We hence have support for the argument that OJ (mean length 20.66) has a stronger impact on growth than VC (mean length 16.96). It should be noted that this test does not consider the impact of the dose. As we concluded earlier, dose has an impact on the variance of both OJ and VC sample means, but also on the relative differens on means.
+  
+T-test comparing the difference in length by supp, grouped by dose:
+```{r}
+t.test(ToothGrowth$len[ToothGrowth$supp == "OJ" & ToothGrowth$dose == 0.5],
+       ToothGrowth$len[ToothGrowth$supp == "VC" & ToothGrowth$dose == 0.5])
+t.test(ToothGrowth$len[ToothGrowth$supp == "OJ" & ToothGrowth$dose == 1.0],
+       ToothGrowth$len[ToothGrowth$supp == "VC" & ToothGrowth$dose == 1.0])
+t.test(ToothGrowth$len[ToothGrowth$supp == "OJ" & ToothGrowth$dose == 2.0],
+       ToothGrowth$len[ToothGrowth$supp == "VC" & ToothGrowth$dose == 2.0])
+```
+These tests support our previous conclusions:  
+- Dose 0.5 : p-value 0.006 = weak support for a statistically significant difference in growth  
+- Dose 1.0 : p-value 0.001 = strong support for a statistically significant difference in growth  
+- Dose 2.0 : p-value 0.96 = no support for a statistically significant difference in growth  
+  
+### Difference by dose
+T-test comparing the difference in length by dose:
+```{r}
+t.test(ToothGrowth$len[ToothGrowth$dose == 0.5], ToothGrowth$len[ToothGrowth$dose == 1.0])
+t.test(ToothGrowth$len[ToothGrowth$dose == 1.0], ToothGrowth$len[ToothGrowth$dose == 2.0])
+t.test(ToothGrowth$len[ToothGrowth$dose == 0.5], ToothGrowth$len[ToothGrowth$dose == 2.0])
+```
+The t-test results show:  
+- Dose 0.5 vs dose 1.0 : p-value 1.3e-07  
+- Dose 0.5 vs dose 1.0 : p-value 1.9e-05  
+- Dose 0.5 vs dose 1.0 : p-value 4.4e-14  
+All three p-values, by commonly used rules for p-value interpretation, would imply that there is a "very strong presumption" against the null hypothesis, which in this case is that there is no difference in lengths between the data sets. We hence have support for the argument that dose size is positively correlated with growth.
+  
+## Question 4
+*4. State your conclusions and the assumptions needed for your conclusions.*
+  
+Conslusions:  
+- Dose size is strongly correlated with tooth length  
+- The supp OJ has a higher impact on topth length than VC with dose sizes 0.5 and 1.0, but is not superior for dose size 2.0  
+- The variance of the supp VC increases with dose size while the variance of supp OJ decreases with dose size  
+  
+Assumptions:  
+- Samples are approximately normal distributed, or t-distributed  
+- Observations are independent from each other  
+- Observations are free from observational error from potential confounding effects
+
